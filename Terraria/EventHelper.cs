@@ -15,11 +15,187 @@ namespace YaoiLib.Terraria
         SolarEclipse,
     }
 
+    public delegate void EventChangeHandler();
+
     /// <summary>
     /// Provides utility functions and properties for vanilla events.
     /// </summary>
     public static class EventHelper
     {
+        internal static void Load()
+        {
+            On_Main.UpdateTime_StartDay += On_UpdateTime_StartDay;
+            On_Main.UpdateTime_StartNight += On_UpdateTime_StartNight;
+
+            On_Main.startPumpkinMoon += On_startPumpkinMoon;
+            On_Main.startSnowMoon += On_startSnowMoon;
+            On_Main.stopMoonEvent += On_stopMoonEvent;
+        }
+
+        internal static void Unload()
+        {
+            _onBloodMoonStart = null;
+            _onBloodMoonStop = null;
+            _onPumpkinMoonStart = null;
+            _onPumpkinMoonStop = null;
+            _onFrostMoonStart = null;
+            _onFrostMoonStop = null;
+            _onSolarEclipseStart = null;
+            _onSolarEclipseStop = null;
+        }
+
+        private static void On_UpdateTime_StartDay(On_Main.orig_UpdateTime_StartDay orig, ref bool stopEvents)
+        {
+            bool wasBloodMoon = Main.bloodMoon;
+
+            orig(ref stopEvents);
+
+            if (wasBloodMoon)
+                _onBloodMoonStop?.Invoke();
+
+            // Pumpkin/frost moons get handled in stopMoonEvent()
+
+            if (Main.eclipse)
+                _onSolarEclipseStart?.Invoke();
+        }
+
+        private static void On_UpdateTime_StartNight(On_Main.orig_UpdateTime_StartNight orig, ref bool stopEvents)
+        {
+            bool wasEclipse = Main.eclipse;
+
+            orig(ref stopEvents);
+
+            if (wasEclipse)
+                _onSolarEclipseStop?.Invoke();
+
+            if (Main.bloodMoon)
+                _onBloodMoonStart?.Invoke();
+        }
+
+        private static void On_startPumpkinMoon(On_Main.orig_startPumpkinMoon orig)
+        {
+            orig();
+            if (Main.pumpkinMoon)
+                _onPumpkinMoonStart?.Invoke();
+        }
+
+        private static void On_startSnowMoon(On_Main.orig_startSnowMoon orig)
+        {
+            orig();
+            if (Main.snowMoon)
+                _onFrostMoonStart?.Invoke();
+        }
+
+        private static void On_stopMoonEvent(On_Main.orig_stopMoonEvent orig)
+        {
+            bool wasPumpkin = Main.pumpkinMoon;
+            bool wasFrost = Main.snowMoon;
+
+            orig();
+
+            if (wasPumpkin && !Main.pumpkinMoon)
+                _onPumpkinMoonStop?.Invoke();
+            if (wasFrost && !Main.snowMoon)
+                _onFrostMoonStop?.Invoke();
+        }
+
+        private static event EventChangeHandler _onBloodMoonStart;
+        private static event EventChangeHandler _onBloodMoonStop;
+        private static event EventChangeHandler _onPumpkinMoonStart;
+        private static event EventChangeHandler _onPumpkinMoonStop;
+        private static event EventChangeHandler _onFrostMoonStart;
+        private static event EventChangeHandler _onFrostMoonStop;
+        private static event EventChangeHandler _onSolarEclipseStart;
+        private static event EventChangeHandler _onSolarEclipseStop;
+
+        /// <summary>
+        /// Invoked after a blood moon event starts.
+        /// </summary>
+        public static event EventChangeHandler OnBloodMoonStart
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            add => _onBloodMoonStart += value;
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            remove => _onBloodMoonStart -= value;
+        }
+
+        /// <summary>
+        /// Invoked after a blood moon event stops.
+        /// </summary>
+        public static event EventChangeHandler OnBloodMoonStop
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            add => _onBloodMoonStop += value;
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            remove => _onBloodMoonStop -= value;
+        }
+
+        /// <summary>
+        /// Invoked after a pumpkin moon event starts.
+        /// </summary>
+        public static event EventChangeHandler OnPumpkinMoonStart
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            add => _onPumpkinMoonStart += value;
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            remove => _onPumpkinMoonStart -= value;
+        }
+
+        /// <summary>
+        /// Invoked after a pumpkin moon event stops.
+        /// </summary>
+        public static event EventChangeHandler OnPumpkinMoonStop
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            add => _onPumpkinMoonStop += value;
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            remove => _onPumpkinMoonStop -= value;
+        }
+
+        /// <summary>
+        /// Invoked after a frost moon event stops.
+        /// </summary>
+        public static event EventChangeHandler OnFrostMoonStart
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            add => _onFrostMoonStart += value;
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            remove => _onFrostMoonStart -= value;
+        }
+
+        /// <summary>
+        /// Invoked after a frost moon event stops.
+        /// </summary>
+        public static event EventChangeHandler OnFrostMoonStop
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            add => _onFrostMoonStop += value;
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            remove => _onFrostMoonStop -= value;
+        }
+
+        /// <summary>
+        /// Invoked after a solar eclipse event starts.
+        /// </summary>
+        public static event EventChangeHandler OnSolarEclipseStart
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            add => _onSolarEclipseStart += value;
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            remove => _onSolarEclipseStart -= value;
+        }
+
+        /// <summary>
+        /// Invoked after a solar eclipse event stops.
+        /// </summary>
+        public static event EventChangeHandler OnSolarEclipseStop
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            add => _onSolarEclipseStop += value;
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            remove => _onSolarEclipseStop -= value;
+        }
+
         /// <summary>
         /// The state of the blood moon event.
         /// </summary>

@@ -5,6 +5,8 @@ using Terraria.ID;
 
 namespace YaoiLib.Terraria
 {
+    public delegate void TimeChangeHandler();
+
     /// <summary>
     /// Provides utility functions and properties for the in-game day/night cycle.
     /// </summary>
@@ -27,6 +29,55 @@ namespace YaoiLib.Terraria
 
         public const double DayStartHour = 4.5;
         public const double NightStartHour = 19.5;
+
+        internal static void Load()
+        {
+            On_Main.UpdateTime_StartDay += On_UpdateTime_StartDay;
+            On_Main.UpdateTime_StartNight += On_UpdateTime_StartNight;
+        }
+
+        internal static void Unload()
+        {
+            _onBecomeDay = null;
+            _onBecomeNight = null;
+        }
+
+        private static void On_UpdateTime_StartDay(On_Main.orig_UpdateTime_StartDay orig, ref bool stopEvents)
+        {
+            orig(ref stopEvents);
+            _onBecomeDay?.Invoke();
+        }
+
+        private static void On_UpdateTime_StartNight(On_Main.orig_UpdateTime_StartNight orig, ref bool stopEvents)
+        {
+            orig(ref stopEvents);
+            _onBecomeNight?.Invoke();
+        }
+
+        private static event TimeChangeHandler _onBecomeDay;
+        private static event TimeChangeHandler _onBecomeNight;
+
+        /// <summary>
+        /// Invoked after it becomes day time.
+        /// </summary>
+        public static event TimeChangeHandler OnBecomeDay
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            add => _onBecomeDay += value;
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            remove => _onBecomeDay -= value;
+        }
+
+        /// <summary>
+        /// Invoked after it becomes night time.
+        /// </summary>
+        public static event TimeChangeHandler OnBecomeNight
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            add => _onBecomeNight += value;
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            remove => _onBecomeNight -= value;
+        }
 
         /// <summary>
         /// Similar to <see cref="IsDay"/>, but is always false on "dont dig up" worlds.

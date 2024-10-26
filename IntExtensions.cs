@@ -8,7 +8,7 @@ namespace YaoiLib
     /// <summary>
     /// Provides utility functions for integers.
     /// </summary>
-    public static class IntHelpers
+    public static class IntExtensions
     {
 
 #if !DEBUG

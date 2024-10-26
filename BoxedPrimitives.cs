@@ -1,5 +1,8 @@
 ﻿namespace YaoiLib
 {
+    /// <summary>
+    /// A collection of primitive constants casted to <see cref="object"/>.
+    /// </summary>
     public static class BoxedPrimitives
     {
         public static readonly object True = true;

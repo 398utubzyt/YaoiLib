@@ -4,6 +4,8 @@ using Terraria;
 
 namespace YaoiLib.Terraria
 {
+    public delegate void WeatherChangeHandler();
+
     /// <summary>
     /// Provides utility functions and properties for the rain.
     /// </summary>
@@ -18,6 +20,103 @@ namespace YaoiLib.Terraria
         /// Gets if it is currently storming.
         /// </summary>
         public static bool IsCertainlyStormy => Main.IsItStorming;
+
+        internal static void Load()
+        {
+            On_Main.StartRain += On_StartRain;
+            On_Main.StopRain += On_StopRain;
+            On_Main.UpdateWindyDayState += On_UpdateWindyDayState;
+        }
+
+        internal static void Unload()
+        {
+            _onStartRaining = null;
+            _onStartStorming = null;
+            _onStopRaining = null;
+            _onStopStorming = null;
+        }
+
+        private static void On_StartRain(On_Main.orig_StartRain orig)
+        {
+            orig();
+
+            if (Main.raining)
+                _onStartRaining?.Invoke();
+        }
+
+        private static void On_StopRain(On_Main.orig_StopRain orig)
+        {
+            orig();
+
+            if (!Main.raining)
+                _onStopRaining?.Invoke();
+        }
+
+        private static void On_UpdateWindyDayState(On_Main.orig_UpdateWindyDayState orig, Main self)
+        {
+            bool isStorming = Main.IsItStorming;
+
+            orig(self);
+            
+            bool isStormingNow = Main.IsItStorming;
+
+            if (isStorming != isStormingNow)
+            {
+                if (isStormingNow)
+                    _onStartStorming?.Invoke();
+                else
+                    _onStopStorming?.Invoke();
+            }
+        }
+
+        private static event WeatherChangeHandler _onStartRaining;
+        private static event WeatherChangeHandler _onStartStorming;
+        private static event WeatherChangeHandler _onStopRaining;
+        private static event WeatherChangeHandler _onStopStorming;
+
+        /// <summary>
+        /// Invoked after it starts raining.
+        /// </summary>
+        public static event WeatherChangeHandler OnStartRaining
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            add => _onStartRaining += value;
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            remove => _onStartRaining -= value;
+        }
+
+        /// <summary>
+        /// Invoked after it starts storming.
+        /// </summary>
+        public static event WeatherChangeHandler OnStartStorming
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            add => _onStartStorming += value;
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            remove => _onStartStorming -= value;
+        }
+
+        /// <summary>
+        /// Invoked after it stops raining.
+        /// </summary>
+        public static event WeatherChangeHandler OnStopRaining
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            add => _onStopRaining += value;
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            remove => _onStopRaining -= value;
+        }
+
+        /// <summary>
+        /// Invoked after it stops storming.
+        /// </summary>
+        public static event WeatherChangeHandler OnStopStorming
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            add => _onStopStorming += value;
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            remove => _onStopStorming -= value;
+        }
 
         /// <summary>
         /// The target state of the rain.
