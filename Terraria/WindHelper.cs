@@ -1,6 +1,8 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System;
+using System.Runtime.CompilerServices;
 
 using Terraria;
+using Terraria.GameContent.Events;
 using Terraria.ID;
 
 namespace YaoiLib.Terraria
@@ -28,6 +30,15 @@ namespace YaoiLib.Terraria
         }
 
         /// <summary>
+        /// The current direction of the wind.
+        /// </summary>
+        public static float WindDirection
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get => Math.Sign(Main.windSpeedCurrent);
+        }
+
+        /// <summary>
         /// The target speed of the wind from <c>-0.8</c> to <c>0.8</c>.
         /// When set, the game will attempt to transition to this wind speed.
         /// </summary>
@@ -37,6 +48,32 @@ namespace YaoiLib.Terraria
             get => Main.windSpeedTarget;
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             set => Main.windSpeedTarget = value;
+        }
+
+        /// <summary>
+        /// Gets if the current wind speed is sustainable for a sandstorm.
+        /// </summary>
+        public static bool SustainableForSandstorm
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get => Math.Abs(Main.windSpeedCurrent) >= 0.6f;
+        }
+
+        /// <summary>
+        /// Gets the projected sandstorm lifetime, taking wind speed into consideration.
+        /// </summary>
+        public static double ProjectedSandstormLifetime
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get
+            {
+                double timeLeft = Sandstorm.TimeLeft / TimeHelper.EventUpdateRate;
+                if (Math.Abs(Main.windSpeedCurrent) < 0.6f)
+                {
+                    timeLeft /= 16.0;
+                }
+                return timeLeft;
+            }
         }
 
         /// <summary>

@@ -163,6 +163,15 @@ namespace YaoiLib.Terraria
         }
 
         /// <summary>
+        /// Gets the projected rain lifetime, taking into account the event update rate.
+        /// </summary>
+        public static double ProjectedRainLifetime
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get => Main.rainTime / Main.desiredWorldEventsUpdateRate;
+        }
+
+        /// <summary>
         /// Sets both <see cref="TargetRainIntensity"/> and <see cref="RainIntensity"/>
         /// simultaneously to avoid transitioning into the new intensity.
         /// </summary>

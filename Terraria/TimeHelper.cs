@@ -1,11 +1,21 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System;
+using System.Runtime.CompilerServices;
 
 using Terraria;
 using Terraria.ID;
+using Terraria.Localization;
 
 namespace YaoiLib.Terraria
 {
     public delegate void TimeChangeHandler();
+
+    public enum WatchLevel
+    {
+        None = 0,
+        Copper = 1,
+        Silver = 2,
+        Gold = 3,
+    }
 
     /// <summary>
     /// Provides utility functions and properties for the in-game day/night cycle.
@@ -24,8 +34,16 @@ namespace YaoiLib.Terraria
         public const double DayHalfLengthHours = 7.5;
         public const double NightHalfLengthHours = 4.5;
 
-        public const double TicksToHours = 0.000277777777777777777;
+        public const double TicksToHours = 0.00027777777777777777;
         public const double HoursToTicks = 3600;
+
+        public const double TicksToRealHours = 0.00000462962962962963;
+        public const double TicksToRealMinutes = 0.00027777777777777778;
+        public const double TicksToRealSeconds = 0.01666666666666666667;
+
+        public const double RealHoursToTicks = 216000;
+        public const double RealMinutesToTicks = 3600;
+        public const double RealSecondsToTicks = 60;
 
         public const double DayStartHour = 4.5;
         public const double NightStartHour = 19.5;
@@ -80,6 +98,237 @@ namespace YaoiLib.Terraria
         }
 
         /// <summary>
+        /// The current update rate for events in the world.
+        /// </summary>
+        public static double EventUpdateRate
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get => Main.desiredWorldEventsUpdateRate;
+        }
+
+        /// <summary>
+        /// The current update rate for tiles in the world.
+        /// </summary>
+        public static double TileUpdateRate
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get => Main.desiredWorldTilesUpdateRate;
+        }
+
+        /// <summary>
+        /// Converts from game ticks to 24-hour time.
+        /// </summary>
+        /// <param name="ticks">The ticks to convert.</param>
+        /// <param name="isDay">Determines if it is day or night.</param>
+        /// <returns>The converted 24-hour time.</returns>
+        public static double To24HourFormat(double ticks, bool isDay)
+        {
+            if (isDay)
+                return DayStartHour + ticks * TicksToHours;
+
+            if (ticks < NightHalfLengthTicks)
+                return NightStartHour + ticks * TicksToHours;
+
+            return ticks * TicksToHours;
+        }
+
+        /// <summary>
+        /// Converts from 24-hour time to game ticks.
+        /// </summary>
+        /// <param name="hours">The hours to convert.</param>
+        /// <param name="isDay">Determines if it is day or night.</param>
+        /// <returns>The converted game ticks.</returns>
+        public static double ToTickFormat(double hours, out bool isDay)
+        {
+            hours %= 24.0;
+            if (hours < 0.0)
+                hours += 24.0;
+
+            if (hours < DayStartHour)
+            {
+                isDay = false;
+                return NightHalfLengthTicks + (hours * HoursToTicks);
+            } else if (hours < NightStartHour)
+            {
+                isDay = true;
+                return (hours - DayStartHour) * HoursToTicks;
+            } else
+            {
+                isDay = false;
+                return (hours - NightStartHour) * HoursToTicks;
+            }
+        }
+
+        /// <summary>
+        /// Converts from game tick duration to real-time hours.
+        /// </summary>
+        /// <param name="ticks">The ticks to convert.</param>
+        /// <returns>The converted hour duration.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static double DurationToHours(double ticks)
+            => ticks * TicksToRealHours;
+
+        /// <summary>
+        /// Converts from game tick duration to real-time minutes.
+        /// </summary>
+        /// <param name="ticks">The ticks to convert.</param>
+        /// <returns>The converted minute duration.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static double DurationToMinutes(double ticks)
+            => ticks * TicksToRealMinutes;
+
+        /// <summary>
+        /// Converts from game tick duration to real-time seconds.
+        /// </summary>
+        /// <param name="ticks">The ticks to convert.</param>
+        /// <returns>The converted second duration.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static double DurationToSeconds(double ticks)
+            => ticks * TicksToRealSeconds;
+
+        /// <summary>
+        /// Converts from game tick duration to a real-time time span.
+        /// </summary>
+        /// <param name="ticks">The ticks to convert.</param>
+        /// <returns>The converted time span duration.</returns>
+        public static TimeSpan DurationToTimeSpan(double ticks)
+            => TimeSpan.FromSeconds(DurationToSeconds(ticks));
+
+        /// <summary>
+        /// Converts the provided time into a HH:MM formatted string.
+        /// </summary>
+        /// <returns>The provided time in clock notation.</returns>
+        public static string MakeDisplayText(double ticks, bool isDay)
+        {
+            double hr24 = To24HourFormat(ticks, isDay);
+            string amPm = hr24 < 12.0 ? Language.GetTextValue("GameUI.TimeAtMorning") : Language.GetTextValue("GameUI.TimePastMorning");
+
+            int hours = (int)(hr24 % 12);
+            if (hours == 0)
+                hours += 12;
+
+            int minutes = (int)(hr24 % 1.0 * 60.0);
+
+            return string.IsNullOrWhiteSpace(amPm) ?
+                $"{hours}:{minutes:00}" :
+                $"{hours}:{minutes:00} {amPm}";
+        }
+
+        /// <summary>
+        /// Converts the provided time into a HH:MM formatted string using the provided watch level.
+        /// </summary>
+        /// <returns>The provided time in clock notation.</returns>
+        public static string MakeDisplayText(double ticks, bool isDay, WatchLevel watchLevel)
+        {
+            if (watchLevel == 0)
+                return string.Empty;
+
+            double hr24 = To24HourFormat(ticks, isDay);
+            string amPm = hr24 < 12.0 ? Language.GetTextValue("GameUI.TimeAtMorning") : Language.GetTextValue("GameUI.TimePastMorning");
+
+            int hours = (int)(hr24 % 12);
+            if (hours == 0)
+                hours += 12;
+
+            int minutes = watchLevel switch
+            {
+                WatchLevel.Copper => 0,
+                WatchLevel.Silver => (int)(hr24 % 1.0 * 2.0) * 30, // Round down to nearest 30 minutes.
+                _ => (int)(hr24 % 1.0 * 60.0),
+            };
+
+            return string.IsNullOrWhiteSpace(amPm) ?
+                $"{hours}:{minutes:00}" :
+                $"{hours}:{minutes:00} {amPm}";
+        }
+
+        /// <summary>
+        /// Converts the provided time into a HH:MM formatted string using the provided watch level.
+        /// </summary>
+        /// <returns>The provided time in clock notation.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static string MakeDisplayTextForPlayer(double ticks, bool isDay, Player player)
+            => MakeDisplayText(ticks, isDay, (WatchLevel)(player?.accWatch ?? 0));
+
+        /// <summary>
+        /// Converts the provided time into a HH:MM formatted string.
+        /// </summary>
+        /// <returns>The provided time in clock notation.</returns>
+        public static string MakeDisplayText(double hr24)
+        {
+            string amPm = hr24 < 12.0 ? Language.GetTextValue("GameUI.TimeAtMorning") : Language.GetTextValue("GameUI.TimePastMorning");
+
+            int hours = (int)(hr24 % 12);
+            if (hours == 0)
+                hours += 12;
+
+            int minutes = (int)(hr24 % 1.0 * 60.0);
+
+            return string.IsNullOrWhiteSpace(amPm) ?
+                $"{hours}:{minutes:00}" :
+                $"{hours}:{minutes:00} {amPm}";
+        }
+
+        /// <summary>
+        /// Converts the provided time into a HH:MM formatted string using the provided watch level.
+        /// </summary>
+        /// <returns>The provided time in clock notation.</returns>
+        public static string MakeDisplayText(double hr24, WatchLevel watchLevel)
+        {
+            if (watchLevel == 0)
+                return string.Empty;
+
+            string amPm = hr24 < 12.0 ? Language.GetTextValue("GameUI.TimeAtMorning") : Language.GetTextValue("GameUI.TimePastMorning");
+
+            int h = (int)(hr24 % 12);
+            if (h == 0)
+                h += 12;
+
+            int m = watchLevel switch
+            {
+                WatchLevel.Copper => 0,
+                WatchLevel.Silver => (int)(hr24 % 1.0 * 2.0) * 30, // Round down to nearest 30 minutes.
+                _ => (int)(hr24 % 1.0 * 60.0),
+            };
+
+            return string.IsNullOrWhiteSpace(amPm) ?
+                $"{h}:{m:00}" :
+                $"{h}:{m:00} {amPm}";
+        }
+
+        /// <summary>
+        /// Converts the provided time into a HH:MM formatted string using the provided watch level.
+        /// </summary>
+        /// <returns>The provided time in clock notation.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static string MakeDisplayTextForPlayer(double hours, Player player)
+            => MakeDisplayText(hours, (WatchLevel)(player?.accWatch ?? 0));
+
+        /// <summary>
+        /// Converts the current time into a HH:MM formatted string.
+        /// </summary>
+        /// <returns>The current time in clock notation.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static string MakeCurrentDisplayText()
+            => MakeDisplayText(Time24Hours);
+
+        /// <summary>
+        /// Converts the current time into a HH:MM formatted string using the provided watch level.
+        /// </summary>
+        /// <returns>The current time in clock notation.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static string MakeCurrentDisplayText(WatchLevel watchLevel)
+            => MakeDisplayText(Time24Hours, watchLevel);
+
+        /// <summary>
+        /// Converts the current time into a HH:MM formatted string.
+        /// </summary>
+        /// <returns>The current time in clock notation.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static string MakeCurrentDisplayTextForPlayer(Player player)
+            => MakeDisplayTextForPlayer(Time24Hours, player);
+
+        /// <summary>
         /// Similar to <see cref="IsDay"/>, but is always false on "dont dig up" worlds.
         /// </summary>
         public static bool IsCertainlyDay => Main.IsItDay();
@@ -132,36 +381,10 @@ namespace YaoiLib.Terraria
         /// </summary>
         public static double Time24Hours
         {
-            get
-            {
-                if (Main.dayTime)
-                    return DayStartHour + Main.time * TicksToHours;
-
-                if (Main.time < NightHalfLengthTicks)
-                    return NightStartHour + Main.time * TicksToHours;
-
-                return Main.time * TicksToHours;
-            }
-            set
-            {
-                value %= 24.0;
-                if (value < 0.0)
-                    value += 24.0;
-
-                if (value < DayStartHour)
-                {
-                    Main.dayTime = false;
-                    Main.time = NightHalfLengthTicks + (value * HoursToTicks);
-                } else if (value < NightStartHour)
-                {
-                    Main.dayTime = true;
-                    Main.time = (value - DayStartHour) * HoursToTicks;
-                } else
-                {
-                    Main.dayTime = false;
-                    Main.time = (value - NightStartHour) * HoursToTicks;
-                }
-            }
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get => To24HourFormat(Main.time, Main.dayTime);
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            set => Main.time = ToTickFormat(value, out Main.dayTime);
         }
 
         /// <summary>
@@ -192,30 +415,7 @@ namespace YaoiLib.Terraria
         /// </summary>
         /// <param name="hours">The time in hours to skip to.</param>
         public static void SetTimeHours(double hours)
-        {
-            hours %= 24.0;
-            if (hours < 0.0)
-                hours += 24.0;
-
-            double ticks;
-            bool isDay;
-
-            if (hours < DayStartHour)
-            {
-                ticks = NightHalfLengthTicks + (hours * HoursToTicks);
-                isDay = false;
-            } else if (hours < NightStartHour)
-            {
-                ticks = (hours - DayStartHour) * HoursToTicks;
-                isDay = true;
-            } else
-            {
-                ticks = (hours - NightStartHour) * HoursToTicks;
-                isDay = false;
-            }
-
-            SetTimeTicks(ticks, isDay);
-        }
+            => SetTimeTicks(ToTickFormat(hours, out bool isDay), isDay);
 
         /// <summary>
         /// Toggles between day (4:30 AM) and night (7:30 PM) and runs all the logic for time changes.
