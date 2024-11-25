@@ -6,7 +6,11 @@
 	<!-- General -->
 	<PropertyGroup>
 		<RootNamespace>YaoiLib</RootNamespace>
+		<GenerateDocumentationFile>True</GenerateDocumentationFile>
 	</PropertyGroup>
+	<ItemGroup>
+	  <Folder Include="Assets\" />
+	</ItemGroup>
 
 	<!-- References -->
 

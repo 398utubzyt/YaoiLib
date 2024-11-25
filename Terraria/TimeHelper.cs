@@ -34,16 +34,16 @@ namespace YaoiLib.Terraria
         public const double DayHalfLengthHours = 7.5;
         public const double NightHalfLengthHours = 4.5;
 
-        public const double TicksToHours = 0.00027777777777777777;
-        public const double HoursToTicks = 3600;
+        public const double HoursPerTick = 0.00027777777777777777;
+        public const double TicksPerHour = 3600;
 
-        public const double TicksToRealHours = 0.00000462962962962963;
-        public const double TicksToRealMinutes = 0.00027777777777777778;
-        public const double TicksToRealSeconds = 0.01666666666666666667;
+        public const double RealHoursPerTick = 0.00000462962962962963;
+        public const double RealMinutesPerTick = 0.00027777777777777778;
+        public const double RealSecondsPerTick = 0.01666666666666666667;
 
-        public const double RealHoursToTicks = 216000;
-        public const double RealMinutesToTicks = 3600;
-        public const double RealSecondsToTicks = 60;
+        public const double TicksPerRealHour = 216000;
+        public const double TicksPerRealMinute = 3600;
+        public const double TicksPerRealSecond = 60;
 
         public const double DayStartHour = 4.5;
         public const double NightStartHour = 19.5;
@@ -124,12 +124,12 @@ namespace YaoiLib.Terraria
         public static double To24HourFormat(double ticks, bool isDay)
         {
             if (isDay)
-                return DayStartHour + ticks * TicksToHours;
+                return DayStartHour + ticks * HoursPerTick;
 
             if (ticks < NightHalfLengthTicks)
-                return NightStartHour + ticks * TicksToHours;
+                return NightStartHour + ticks * HoursPerTick;
 
-            return ticks * TicksToHours;
+            return ticks * HoursPerTick;
         }
 
         /// <summary>
@@ -147,52 +147,88 @@ namespace YaoiLib.Terraria
             if (hours < DayStartHour)
             {
                 isDay = false;
-                return NightHalfLengthTicks + (hours * HoursToTicks);
+                return NightHalfLengthTicks + (hours * TicksPerHour);
             } else if (hours < NightStartHour)
             {
                 isDay = true;
-                return (hours - DayStartHour) * HoursToTicks;
+                return (hours - DayStartHour) * TicksPerHour;
             } else
             {
                 isDay = false;
-                return (hours - NightStartHour) * HoursToTicks;
+                return (hours - NightStartHour) * TicksPerHour;
             }
         }
 
         /// <summary>
-        /// Converts from game tick duration to real-time hours.
+        /// Converts from a game tick duration to real-time hours.
         /// </summary>
         /// <param name="ticks">The ticks to convert.</param>
         /// <returns>The converted hour duration.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static double DurationToHours(double ticks)
-            => ticks * TicksToRealHours;
+            => ticks * RealHoursPerTick;
 
         /// <summary>
-        /// Converts from game tick duration to real-time minutes.
+        /// Converts from a game tick duration to real-time minutes.
         /// </summary>
         /// <param name="ticks">The ticks to convert.</param>
         /// <returns>The converted minute duration.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static double DurationToMinutes(double ticks)
-            => ticks * TicksToRealMinutes;
+            => ticks * RealMinutesPerTick;
 
         /// <summary>
-        /// Converts from game tick duration to real-time seconds.
+        /// Converts from a game tick duration to real-time seconds.
         /// </summary>
         /// <param name="ticks">The ticks to convert.</param>
         /// <returns>The converted second duration.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static double DurationToSeconds(double ticks)
-            => ticks * TicksToRealSeconds;
+        public static double TicksToSeconds(double ticks)
+            => ticks * RealSecondsPerTick;
 
         /// <summary>
-        /// Converts from game tick duration to a real-time time span.
+        /// Converts from a game tick duration to a real-time time span.
         /// </summary>
         /// <param name="ticks">The ticks to convert.</param>
         /// <returns>The converted time span duration.</returns>
-        public static TimeSpan DurationToTimeSpan(double ticks)
-            => TimeSpan.FromSeconds(DurationToSeconds(ticks));
+        public static TimeSpan TicksToTimeSpan(double ticks)
+            => TimeSpan.FromSeconds(ticks * RealSecondsPerTick);
+
+        /// <summary>
+        /// Converts from real-time hours to a game tick duration.
+        /// </summary>
+        /// <param name="hours">The hours to convert.</param>
+        /// <returns>The converted game tick duration.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static double HoursToTicks(double hours)
+            => hours * TicksPerRealHour;
+
+        /// <summary>
+        /// Converts from real-time minutes to a game tick duration.
+        /// </summary>
+        /// <param name="minutes">The minutes to convert.</param>
+        /// <returns>The converted game tick duration.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static double MinutesToTicks(double minutes)
+            => minutes * TicksPerRealMinute;
+
+        /// <summary>
+        /// Converts from real-time seconds to a game tick duration.
+        /// </summary>
+        /// <param name="seconds">The seconds to convert.</param>
+        /// <returns>The converted game tick duration.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static double SecondsToTicks(double seconds)
+            => seconds * TicksPerRealSecond;
+
+        /// <summary>
+        /// Converts from real-time time span to a game tick duration.
+        /// </summary>
+        /// <param name="time">The time span to convert.</param>
+        /// <returns>The converted game tick duration.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static double TimeSpanToTicks(TimeSpan time)
+            => time.TotalSeconds * TicksPerRealSecond;
 
         /// <summary>
         /// Converts the provided time into a HH:MM formatted string.

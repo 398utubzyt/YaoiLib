@@ -1,6 +1,7 @@
 using Terraria.ModLoader;
 
 using YaoiLib.Terraria;
+using YaoiLib.Terraria.Graphics;
 
 namespace YaoiLib
 {
@@ -8,6 +9,7 @@ namespace YaoiLib
 	{
         public override void Load()
         {
+            DrawingHelper.Load();
             TimeHelper.Load();
             RainHelper.Load();
             EventHelper.Load();
@@ -16,9 +18,11 @@ namespace YaoiLib
 
         public override void Unload()
         {
+            NpcHelper.Unload();
             TimeHelper.Unload();
             RainHelper.Unload();
             EventHelper.Unload();
+            DrawingHelper.Unload();
         }
     }
 }
