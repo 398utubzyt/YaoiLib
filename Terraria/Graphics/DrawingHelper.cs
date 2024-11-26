@@ -1,26 +1,15 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
+using ReLogic.Content;
+
 using Terraria;
+using Terraria.GameContent;
 
 namespace YaoiLib.Terraria.Graphics
 {
     public static class DrawingHelper
     {
-        private static readonly int[] _pixelTexData = [ 1 ];
-        private static Texture2D _pixelTex;
-
-        internal static void Load()
-        {
-            _pixelTex = new(Main.graphics.GraphicsDevice, 1, 1, false, SurfaceFormat.Color);
-            _pixelTex.SetData(_pixelTexData);
-        }
-
-        internal static void Unload()
-        {
-            _pixelTex.Dispose();
-        }
-
         /// <summary>
         /// Draws a rectangle using screen-space coordinates.
         /// </summary>
@@ -29,8 +18,8 @@ namespace YaoiLib.Terraria.Graphics
         /// <param name="color">The color of the rectangle.</param>
         public static void DrawRect(SpriteBatch batch, Rectangle rect, Color color)
         {
-            if (_pixelTex != null)
-                batch.Draw(_pixelTex, rect, color);
+            if (TextureAssets.MagicPixel != null)
+                batch.Draw(TextureAssets.MagicPixel.Value, rect, color);
         }
     }
 }

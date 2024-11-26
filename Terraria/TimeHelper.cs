@@ -165,7 +165,7 @@ namespace YaoiLib.Terraria
         /// <param name="ticks">The ticks to convert.</param>
         /// <returns>The converted hour duration.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static double DurationToHours(double ticks)
+        public static double TicksToHours(double ticks)
             => ticks * RealHoursPerTick;
 
         /// <summary>
@@ -174,7 +174,7 @@ namespace YaoiLib.Terraria
         /// <param name="ticks">The ticks to convert.</param>
         /// <returns>The converted minute duration.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static double DurationToMinutes(double ticks)
+        public static double TicksToMinutes(double ticks)
             => ticks * RealMinutesPerTick;
 
         /// <summary>

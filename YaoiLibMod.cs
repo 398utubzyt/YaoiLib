@@ -9,11 +9,11 @@ namespace YaoiLib
 	{
         public override void Load()
         {
-            DrawingHelper.Load();
             TimeHelper.Load();
             RainHelper.Load();
             EventHelper.Load();
             MusicHelper.Load();
+            NpcHelper.Load();
         }
 
         public override void Unload()
@@ -22,7 +22,6 @@ namespace YaoiLib
             TimeHelper.Unload();
             RainHelper.Unload();
             EventHelper.Unload();
-            DrawingHelper.Unload();
         }
     }
 }

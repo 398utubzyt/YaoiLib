@@ -65,7 +65,7 @@ namespace YaoiLib.Terraria
                     {
                         _onBossDie?.Invoke(npc);
                         _npcWasAlive[npc.whoAmI] = false;
-                        UpdateCache();
+                        UpdateCacheExcept(npc);
                     }
                 }
             }
@@ -78,7 +78,7 @@ namespace YaoiLib.Terraria
                     {
                         _onBossDie?.Invoke(npc);
                         _npcWasAlive[npc.whoAmI] = false;
-                        UpdateCache();
+                        UpdateCacheExcept(npc);
                     }
                 }
             }
@@ -113,7 +113,24 @@ namespace YaoiLib.Terraria
 
         private static void UpdateCache()
         {
-            _bossActiveCache = UpdateBossCount() > 0;
+            int c = 0;
+
+            var e = ActiveBosses.GetEnumerator();
+            while (e.MoveNext())
+                ++c;
+
+            _bossCountCache = c;
+            _bossActiveCache = c > 0;
+        }
+
+        private static void UpdateCacheExcept(NPC ignore)
+        {
+            UpdateCache();
+
+            if (ignore.active)
+            {
+                _bossActiveCache = --_bossCountCache > 0;
+            }
         }
 
         private static bool[] _npcWasAlive;
