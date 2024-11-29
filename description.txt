@@ -1,1 +1,16 @@
-A utility library for my tModLoader mods.
+[h1]What the hell is this!?[/h1]
+This is a core dependency library for my Terraria mods. It provides a bunch of helpful functions and properties which allow for neater code and fewer errors.
+
+Long story short: less references to "Main" in my source code.
+
+[h1]Q&A[/h1]
+[h3]Q: Does this mod add any new content?[/h3]
+A: No, it's a library.
+[h3]Q: Why do I have to download this mod?[/h3]
+A: Because I said so.
+[h3]Q: Why is the name like that?[/h3]
+A: I think that's enough Q&A for now.
+
+[h1]Source Code[/h1]
+If you want to contribute to the madness that is my bad code, feel free to check out the repository:
+https://github.com/398utubzyt/YaoiLib
