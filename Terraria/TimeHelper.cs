@@ -129,7 +129,7 @@ namespace YaoiLib.Terraria
             if (ticks < NightHalfLengthTicks)
                 return NightStartHour + ticks * HoursPerTick;
 
-            return ticks * HoursPerTick;
+            return (ticks - NightHalfLengthTicks) * HoursPerTick;
         }
 
         /// <summary>
