@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
@@ -14,12 +15,10 @@ namespace YaoiLib.Terraria
         private readonly ReadOnlySpan<NPC> _npcs = npcs;
 
         public Enumerator GetEnumerator() => new(_npcs.GetEnumerator());
-        public EowEnumerator GetEowEnumerator() => new(_npcs.GetEnumerator());
 
         public ref struct Enumerator(ReadOnlySpan<NPC>.Enumerator enumerator)
         {
             private ReadOnlySpan<NPC>.Enumerator _enumerator = enumerator;
-            private bool _eow;
 
             public readonly NPC Current => _enumerator.Current;
 
@@ -38,25 +37,6 @@ namespace YaoiLib.Terraria
                 return false;
             }
         }
-
-        public ref struct EowEnumerator(ReadOnlySpan<NPC>.Enumerator enumerator)
-        {
-            private ReadOnlySpan<NPC>.Enumerator _enumerator = enumerator;
-
-            public readonly NPC Current => _enumerator.Current;
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public bool MoveNext()
-            {
-                while (_enumerator.MoveNext())
-                {
-                    if (_enumerator.Current.active && NpcHelper.IsEowSegment(_enumerator.Current))
-                        return true;
-                }
-
-                return false;
-            }
-        }
     }
 
     public delegate void NpcSpawnHandler(NPC npc, IEntitySource source);
@@ -67,20 +47,14 @@ namespace YaoiLib.Terraria
     /// </summary>
     public static class NpcHelper
     {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static bool IsEowSegment(NPC npc)
+        private static bool IsNotEowOrIsNew(NPC npc)
         {
-            return npc.type >= NPCID.EaterofWorldsHead && npc.type <= NPCID.EaterofWorldsTail;
+            return npc.type != NPCID.EaterofWorldsHead || CountOf(NPCID.EaterofWorldsHead) == 1;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static int EowSegmentCount()
+        private static bool IsNotEowOrIsKillable(NPC npc)
         {
-            int c = 0;
-            BossIterator.EowEnumerator e = ActiveBosses.GetEowEnumerator();
-            while (e.MoveNext())
-                c++;
-            return c;
+            return (npc.type != NPCID.EaterofWorldsHead && npc.type != NPCID.EaterofWorldsTail) || GetEaterOfWorldsSegmentCount() == 2;
         }
 
         private class NpcHelperGlobalNPC : GlobalNPC
@@ -89,9 +63,15 @@ namespace YaoiLib.Terraria
             {
                 if (ShouldCountAsBoss(npc))
                 {
-                    _onBossSpawn?.Invoke(npc, source);
-                    _npcWasAlive[npc.whoAmI] = true;
+                    if (IsNotEowOrIsNew(npc))
+                    {
+                        _onBossSpawn?.Invoke(npc, source);
+                    }
+                    _npcWasAlive[npc.whoAmI].Set(npc.type);
                     UpdateCache();
+                } else if (npc.type == NPCID.EaterofWorldsBody || npc.type == NPCID.EaterofWorldsTail)
+                {
+                    _npcWasAlive[npc.whoAmI].Set(npc.type);
                 }
             }
 
@@ -99,11 +79,17 @@ namespace YaoiLib.Terraria
             {
                 if (!NetHelper.IsClient)
                 {
-                    if (ShouldCountAsBoss(npc))
+                    if (ShouldCountAsBoss(npc) || npc.type == NPCID.EaterofWorldsTail)
                     {
-                        _onBossDie?.Invoke(npc);
-                        _npcWasAlive[npc.whoAmI] = false;
+                        if (IsNotEowOrIsKillable(npc))
+                        {
+                            _onBossDie?.Invoke(npc);
+                        }
+                        _npcWasAlive[npc.whoAmI].Clear();
                         UpdateCacheExcept(npc);
+                    } else if (npc.type == NPCID.EaterofWorldsBody)
+                    {
+                        _npcWasAlive[npc.whoAmI].Clear();
                     }
                 }
             }
@@ -112,18 +98,27 @@ namespace YaoiLib.Terraria
             {
                 if (NetHelper.IsClient)
                 {
-                    if (ShouldCountAsBoss(npc) && npc.life <= 0)
+                    if (npc.life <= 0)
                     {
-                        _onBossDie?.Invoke(npc);
-                        _npcWasAlive[npc.whoAmI] = false;
-                        UpdateCacheExcept(npc);
+                        if (ShouldCountAsBoss(npc) || npc.type == NPCID.EaterofWorldsTail)
+                        {
+                            if (IsNotEowOrIsKillable(npc))
+                            {
+                                _onBossDie?.Invoke(npc);
+                            }
+                            _npcWasAlive[npc.whoAmI].Clear();
+                            UpdateCacheExcept(npc);
+                        } else if (npc.type == NPCID.EaterofWorldsBody)
+                        {
+                            _npcWasAlive[npc.whoAmI].Clear();
+                        }
                     }
                 }
             }
 
             public override bool AppliesToEntity(NPC entity, bool lateInstantiation)
             {
-                return lateInstantiation && entity.boss;
+                return lateInstantiation && ShouldCountAsBoss(entity) || entity.type == NPCID.EaterofWorldsBody || entity.type == NPCID.EaterofWorldsTail;
             }
         }
 
@@ -131,15 +126,29 @@ namespace YaoiLib.Terraria
         {
             public override void PostUpdateNPCs()
             {
-                ref bool wasAlive = ref MemoryMarshal.GetArrayDataReference(_npcWasAlive);
+                Debug.Assert(Main.npc.Length == _npcWasAlive.Length);
+
+                ref WasAliveData wasAlive = ref MemoryMarshal.GetArrayDataReference(_npcWasAlive);
                 foreach (NPC npc in Main.npc)
                 {
                     if (!npc.active)
                     {
-                        if (wasAlive)
+                        if (wasAlive.WasAlive)
                         {
-                            _onBossDespawn?.Invoke(npc);
-                            wasAlive = false;
+                            if (wasAlive.Type != NPCID.EaterofWorldsBody && wasAlive.Type != NPCID.EaterofWorldsTail)
+                            {
+                                _onBossDespawn?.Invoke(npc);
+                                // NetHelper.ChatLocalPost($"DEBUG INFO: boss: {npc.boss}, type: {npc.type} ({npc.TypeName})", 0, 255, 255);
+                                UpdateCache();
+                            }
+                            
+                            wasAlive.Clear();
+                        }
+                    } else if (wasAlive.WasAlive)
+                    {
+                        if (wasAlive.Type != npc.type)
+                        {
+                            wasAlive.Type = npc.type;
                             UpdateCache();
                         }
                     }
@@ -171,13 +180,32 @@ namespace YaoiLib.Terraria
             }
         }
 
-        private static bool[] _npcWasAlive;
+        private struct WasAliveData
+        {
+            public int Type;
+            public bool WasAlive;
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Set(int type)
+            {
+                Type = type;
+                WasAlive = true;
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Clear()
+            {
+                WasAlive = false;
+            }
+        }
+
+        private static WasAliveData[] _npcWasAlive;
         private static bool _bossActiveCache;
         private static int _bossCountCache;
 
         internal static void Load()
         {
-            _npcWasAlive = new bool[Main.maxNPCs];
+            _npcWasAlive = new WasAliveData[Main.maxNPCs];
         }
 
         internal static void Unload()
@@ -202,7 +230,7 @@ namespace YaoiLib.Terraria
         }
 
         /// <summary>
-        /// Invoked after a boss gets killed.
+        /// Invoked right before a boss gets killed.
         /// </summary>
         public static event NpcKillHandler OnBossKill
         {
@@ -213,7 +241,7 @@ namespace YaoiLib.Terraria
         }
 
         /// <summary>
-        /// Invoked after a boss despawns.
+        /// Invoked after a boss has despawned.
         /// </summary>
         public static event NpcKillHandler OnBossDespawn
         {
